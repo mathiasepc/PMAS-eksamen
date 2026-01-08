@@ -1,9 +1,10 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy JAR app to Azure Web App - eksamenCICD
+name: Build and deploy JAR app to Azure Web App - PMAS5
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -11,8 +12,10 @@ on:
 
 jobs:
   build:
+    name: build and test
     runs-on: ubuntu-latest
     permissions:
+      checks: write
       contents: read #This is required for actions/checkout
 
     steps:
@@ -25,7 +28,15 @@ jobs:
           distribution: 'microsoft'
 
       - name: Build with Maven
-        run: mvn clean install
+        run: mvn clean install -DskipTests
+
+      - name: Run Tests
+        run: mvn test
+
+      - name: Publish Test Report
+        if: success() || failure()
+        uses: scacap/action-surefire-report@v1
+
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -36,6 +47,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     permissions:
       id-token: write #This is required for requesting the JWT
       contents: read #This is required for actions/checkout
